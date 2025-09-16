@@ -42,6 +42,7 @@ bool UserInterface::begin()
     this->display->setTextColor(SSD1306_WHITE);
     this->display->clearDisplay();
     this->display->display();
+    this->display->setRotation(3);
 
     return true;
 }
@@ -65,6 +66,12 @@ void UserInterface::setPage(UserInterface::Page page, ...)
 
     switch (page)
     {
+    case UserInterface::PAGE_SPLASH_SCREEN:
+        this->display->setCursor(12, 12);
+        this->display->setTextSize(2);
+        this->display->print("TankScope");
+        break;
+
     case UserInterface::PAGE_MENU_MEASURE:
         this->display->drawBitmap(0, 0, measure_menu_bmp, 123, 32, SSD1306_WHITE);
         break;

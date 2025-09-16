@@ -29,6 +29,15 @@ void App::setup()
     digitalWrite(LASER_PIN, LOW);
     delay(100);
 
+    this->logInfo("ui", "Initiating interface...");
+    if (!this->ui->begin())
+    {
+        this->logError("ui", "Failed to initiate interface, resetting...");
+        this->restart();
+    }
+    this->logInfo("ui", "Interface initiated");
+    this->ui->setPage(UserInterface::PAGE_SPLASH_SCREEN);
+
     this->logInfo("sonar", "Initiating sonar...");
     this->sonar->begin();
     delay(100);
@@ -44,20 +53,14 @@ void App::setup()
         }
     }
     this->logInfo("sonar", "Sonar initiated successfully");
+    for (uint16_t i = 0; i < 70; ++i)
+        this->sonar->read();
 
     this->logInfo("accel", "Initiating accel...");
     this->adxl.powerOn();
     this->adxl.setRangeSetting(2);
     this->applyCalibAccel();
     this->logInfo("accel", "Accel initiated");
-
-    this->logInfo("ui", "Initiating interface...");
-    if (!this->ui->begin())
-    {
-        this->logError("ui", "Failed to initiate interface, resetting...");
-        this->restart();
-    }
-    this->logInfo("ui", "Interface initiated");
 }
 
 void App::loop()

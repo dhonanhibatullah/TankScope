@@ -22,6 +22,7 @@ public:
 
     enum Page : uint8_t
     {
+        PAGE_SPLASH_SCREEN,
         PAGE_MENU_MEASURE,
         PAGE_MENU_POWER,
         PAGE_MENU_CALIB,
