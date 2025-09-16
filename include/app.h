@@ -29,7 +29,6 @@ public:
     void loop();
 
 private:
-    SoftwareSerial *sonar_ser;
     MaxSonarEZ *sonar;
     ADXL345 adxl;
     UserInterface *ui;

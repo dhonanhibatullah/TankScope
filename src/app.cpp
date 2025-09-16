@@ -2,11 +2,10 @@
 
 App::App() : app_st(App::SELECT)
 {
-    this->sonar_ser = new SoftwareSerial(
-        SONAR_RX_PIN,
-        SONAR_TX_PIN);
     this->sonar = new MaxSonarEZ(
-        this->sonar_ser,
+        new SoftwareSerial(
+            SONAR_RX_PIN,
+            SONAR_TX_PIN),
         SONAR_EN_PIN,
         SONAR_FILTER_LEN);
     this->ui = new UserInterface(
@@ -16,7 +15,6 @@ App::App() : app_st(App::SELECT)
 
 App::~App()
 {
-    delete this->sonar_ser;
     delete this->sonar;
     delete this->ui;
 }
@@ -31,23 +29,21 @@ void App::setup()
     digitalWrite(LASER_PIN, LOW);
     delay(100);
 
-    // this->logInfo("sonar", "Initiating sonar...");
-    // this->sonar_ser->begin(9600);
-    // delay(100);
-    // while (1)
-    // {
-    //     if (this->sonar->connection())
-    //         break;
-    //     trial += 1;
-    //     delay(150);
+    this->logInfo("sonar", "Initiating sonar...");
+    this->sonar->begin();
+    delay(100);
+    while (this->sonar->read() == MAXSONAREZ_READING_ERROR)
+    {
+        trial += 1;
+        delay(150);
 
-    //     if (trial == 3)
-    //     {
-    //         this->logError("sonar", "Failed to initiate sonar, resetting...");
-    //         this->restart();
-    //     }
-    // }
-    // this->logInfo("sonar", "Sonar initiated successfully");
+        if (trial == 3)
+        {
+            this->logError("sonar", "Failed to initiate sonar, resetting...");
+            this->restart();
+        }
+    }
+    this->logInfo("sonar", "Sonar initiated successfully");
 
     this->logInfo("accel", "Initiating accel...");
     this->adxl.powerOn();
@@ -183,13 +179,25 @@ void App::updateAccel(int &y, int &z)
 
 void App::onMeasure()
 {
+    static bool laser_on = false;
     static bool captured = false;
     static bool released = false;
-    static int dist, y, z;
+    static int dist = 0, y = 0, z = 0;
+
+    if (!laser_on)
+    {
+        digitalWrite(LASER_PIN, HIGH);
+        laser_on = true;
+    }
 
     if (!captured)
     {
-        dist = random(0, 5000);
+        if (this->sonar->available())
+        {
+            int tmp = this->sonar->read();
+            if (tmp != MAXSONAREZ_READING_ERROR)
+                dist = tmp;
+        }
         this->updateAccel(y, z);
         this->ui->setPage(UserInterface::PAGE_MEASURE, dist, y, z);
     }
@@ -213,6 +221,8 @@ void App::onMeasure()
     }
     else if (this->btn_in == UserInterface::BUTTON_INPUT_PRESSED_LONG)
     {
+        digitalWrite(LASER_PIN, LOW);
+        laser_on = false;
         released = false;
         this->app_st = App::SELECT;
     }

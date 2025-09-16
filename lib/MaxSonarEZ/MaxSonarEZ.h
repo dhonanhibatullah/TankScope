@@ -12,23 +12,19 @@
 class MaxSonarEZ
 {
 public:
-    MaxSonarEZ(SoftwareSerial *ser, uint8_t enable_pin, uint8_t filter_buf_len, uint32_t timeout = 150U);
+    MaxSonarEZ(SoftwareSerial *ser, uint8_t enable_pin, uint32_t timeout = 150U);
     ~MaxSonarEZ();
     MaxSonarEZ(MaxSonarEZ &other) = delete;
     MaxSonarEZ &operator=(MaxSonarEZ &other) = delete;
-    bool begin();
-    bool update();
-    int readRaw();
-    int readFiltered();
+    void begin();
+    bool available();
+    int read();
 
 private:
     SoftwareSerial *ser;
     uint8_t enable_pin;
     uint32_t timeout;
-    uint8_t filter_buf_len;
-    uint8_t filter_buf_idx;
     int *filter_buf;
-    int streamRead();
 };
 
 #endif
