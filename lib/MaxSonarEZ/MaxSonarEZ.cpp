@@ -52,5 +52,8 @@ int MaxSonarEZ::read()
                    (buf[4] - ascii_offset);
         }
     }
+
+    while (this->ser->available() > 0)
+        this->ser->read();
     return MAXSONAREZ_READING_ERROR;
 }
