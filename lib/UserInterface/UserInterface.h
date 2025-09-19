@@ -2,11 +2,14 @@
 #define __USER_INTERFACE_H
 
 #include <stdarg.h>
+#include <math.h>
 #include <Arduino.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
-#include "PageBmp.h"
+#include "LogoBmp.h"
+
+#define CALIB_
 
 class UserInterface
 {
@@ -23,15 +26,13 @@ public:
     enum Page : uint8_t
     {
         PAGE_SPLASH_SCREEN,
-        PAGE_MENU_MEASURE,
+        PAGE_MENU_DISTANCE,
+        PAGE_MENU_ANGLE,
         PAGE_MENU_POWER,
-        PAGE_MENU_CALIB,
-        PAGE_MEASURE,
+        PAGE_DISTANCE,
+        PAGE_ANGLE,
         PAGE_FLASH,
-        PAGE_POWER,
-        PAGE_CALIB_0,
-        PAGE_CALIB_1,
-        PAGE_CALIB_2
+        PAGE_POWER
     };
 
     static UserInterface *inst;
@@ -50,6 +51,8 @@ private:
     volatile uint8_t button_pin;
     volatile uint8_t battery_pin;
     bool menu_opened;
+    int calcCircleCoor(int q);
+    float calcAngleDeg(int q, float n_max, float p_max);
 };
 
 #endif

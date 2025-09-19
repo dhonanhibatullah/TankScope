@@ -15,7 +15,6 @@ UserInterface::UserInterface(
 UserInterface::~UserInterface()
 {
     TIMSK1 &= ~(1 << OCIE1A);
-    delete this->display;
     UserInterface::inst = nullptr;
 }
 
@@ -42,7 +41,7 @@ bool UserInterface::begin()
     this->display->setTextColor(SSD1306_WHITE);
     this->display->clearDisplay();
     this->display->display();
-    this->display->setRotation(3);
+    this->display->setRotation(2);
 
     return true;
 }
@@ -67,24 +66,33 @@ void UserInterface::setPage(UserInterface::Page page, ...)
     switch (page)
     {
     case UserInterface::PAGE_SPLASH_SCREEN:
-        this->display->setCursor(12, 12);
+        this->display->setCursor(12, 4);
         this->display->setTextSize(2);
         this->display->print("TankScope");
         break;
 
-    case UserInterface::PAGE_MENU_MEASURE:
-        this->display->drawBitmap(0, 0, measure_menu_bmp, 123, 32, SSD1306_WHITE);
+    case UserInterface::PAGE_MENU_DISTANCE:
+        this->display->drawBitmap(12, 0, distance_logo, 32, 32, SSD1306_WHITE);
+        this->display->setCursor(56, 8);
+        this->display->setTextSize(2);
+        this->display->print("JARAK");
+        break;
+
+    case UserInterface::PAGE_MENU_ANGLE:
+        this->display->drawBitmap(12, 0, angle_logo, 32, 32, SSD1306_WHITE);
+        this->display->setCursor(56, 8);
+        this->display->setTextSize(2);
+        this->display->print("SUDUT");
         break;
 
     case UserInterface::PAGE_MENU_POWER:
-        this->display->drawBitmap(0, 0, power_menu_bmp, 123, 32, SSD1306_WHITE);
+        this->display->drawBitmap(12, 0, power_logo, 32, 32, SSD1306_WHITE);
+        this->display->setCursor(56, 8);
+        this->display->setTextSize(2);
+        this->display->print("DAYA");
         break;
 
-    case UserInterface::PAGE_MENU_CALIB:
-        this->display->drawBitmap(0, 0, calib_menu_bmp, 123, 32, SSD1306_WHITE);
-        break;
-
-    case UserInterface::PAGE_MEASURE:
+    case UserInterface::PAGE_DISTANCE:
     {
         va_list args;
         va_start(args, page);
@@ -145,6 +153,37 @@ void UserInterface::setPage(UserInterface::Page page, ...)
         break;
     }
 
+    case UserInterface::PAGE_ANGLE:
+    {
+        va_list args;
+        va_start(args, page);
+        int x = va_arg(args, int);
+        int y = va_arg(args, int);
+        va_end(args);
+
+        int pos_x = this->calcCircleCoor(x);
+        int pos_y = this->calcCircleCoor(y);
+        float deg_x = this->calcAngleDeg(x, 258.0, 266.0);
+        float deg_y = this->calcAngleDeg(y, 261.0, 265.0);
+
+        this->display->setCursor(54, 0);
+        this->display->setTextSize(1);
+        this->display->print("Sudut (deg):");
+
+        this->display->setCursor(54, 12);
+        this->display->print("x: ");
+        this->display->print(deg_x);
+        this->display->setCursor(54, 22);
+        this->display->print("y: ");
+        this->display->print(deg_y);
+
+        this->display->drawCircle(26, 16, 15, SSD1306_WHITE);
+        this->display->drawFastHLine(11, 16, 30, SSD1306_WHITE);
+        this->display->drawFastVLine(26, 1, 30, SSD1306_WHITE);
+        this->display->fillCircle((26 - pos_x), (16 + pos_y), 3, SSD1306_WHITE);
+        break;
+    }
+
     case UserInterface::PAGE_FLASH:
         this->display->fillRect(0, 0, 128, 32, SSD1306_WHITE);
         break;
@@ -168,41 +207,8 @@ void UserInterface::setPage(UserInterface::Page page, ...)
         this->display->setCursor(70, 10);
         this->display->setTextSize(2);
         this->display->print((String(percentage) + String("%")));
-
         break;
     }
-
-    case UserInterface::PAGE_CALIB_0:
-        this->display->setCursor(0, 4);
-        this->display->setTextSize(1);
-        this->display->println(F("Arahkan alat ke bawah"));
-        this->display->println(F("dengan tegak lurus"));
-        this->display->println(F("sempurna."));
-        break;
-
-    case UserInterface::PAGE_CALIB_1:
-    {
-        va_list args;
-        va_start(args, page);
-        int y = va_arg(args, int);
-        int z = va_arg(args, int);
-        va_end(args);
-
-        this->display->setCursor(0, 0);
-        this->display->setTextSize(1);
-        this->display->println(F("> Tekan untuk simpan"));
-
-        this->display->setCursor(0, 12);
-        this->display->println("y: " + String(y));
-        this->display->println("z: " + String(z));
-        break;
-    }
-
-    case UserInterface::PAGE_CALIB_2:
-        this->display->setCursor(0, 0);
-        this->display->setTextSize(1);
-        this->display->println(F("Kalibrasi berhasil!"));
-        break;
     }
 
     this->display->display();
@@ -233,6 +239,34 @@ void UserInterface::isrCallback()
     }
 
     last_st = st;
+}
+
+int UserInterface::calcCircleCoor(int q)
+{
+    int pq = abs(q);
+    pq = (pq > 256) ? 256 : pq;
+    pq /= 16;
+    pq *= ((q < 0) ? -1 : 1);
+    return pq;
+}
+
+float UserInterface::calcAngleDeg(int q, float n_max, float p_max)
+{
+    float sgn = (q < 0) ? 1.0 : -1.0;
+    float deg = (float)(abs(q));
+
+    if (q < 0)
+    {
+        deg = (deg > n_max) ? n_max : deg;
+        deg = asin(deg / n_max) * 57.29578;
+    }
+    else
+    {
+        deg = (deg > p_max) ? p_max : deg;
+        deg = asin(deg / p_max) * 57.29578;
+    }
+
+    return sgn * deg;
 }
 
 ISR(TIMER1_COMPA_vect)
