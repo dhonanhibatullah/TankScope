@@ -57,9 +57,12 @@ void App::setup()
         this->sonar->read();
 
     this->logInfo("accel", "Initiating accel...");
-    this->adxl.powerOn();
-    this->adxl.setRangeSetting(2);
-    this->applyCalibAccel();
+    if (!this->adxl.begin())
+    {
+        this->logError("accel", "Failed to initiate accel, resetting...");
+        this->restart();
+    }
+    this->adxl.setRange(ADXL345_RANGE_2_G);
     this->logInfo("accel", "Accel initiated");
 }
 
@@ -68,16 +71,16 @@ void App::loop()
     this->btn_in = this->ui->getButtonInput();
     switch (this->app_st)
     {
-    case App::MEASURE:
-        this->onMeasure();
+    case App::DISTANCE:
+        this->onDistance();
+        break;
+
+    case App::ANGLE:
+        this->onAngle();
         break;
 
     case App::POWER:
         this->onPower();
-        break;
-
-    case App::CALIB:
-        this->onCalib();
         break;
 
     case App::SELECT:
@@ -142,50 +145,28 @@ void App::restart()
     }
 }
 
-void App::applyCalibAccel()
+void App::updateAccel()
 {
-    if (EEPROM.read(0) != 0xDD)
+    this->x_val = ((80 * this->x_val) + (20 * this->adxl.getX())) / 100;
+    this->y_val = ((80 * this->y_val) + (20 * this->adxl.getY())) / 100;
+    this->z_val = ((80 * this->z_val) + (20 * this->adxl.getZ())) / 100;
+}
+
+void App::updateDistance()
+{
+    if (this->sonar->available())
     {
-        this->logWarn("accel", "Accel is not calibrated yet");
-        return;
+        int tmp = this->sonar->read();
+        if (tmp != MAXSONAREZ_READING_ERROR)
+            this->dist = tmp;
     }
-
-    int y_off, z_off;
-    EEPROM.get(2, y_off);
-    EEPROM.get(6, z_off);
-    this->adxl.setAxisOffset(0, y_off, z_off);
-
-    this->logInfo("accel", "Accel calibration data applied");
 }
 
-void App::calibrateAccel(int y_off, int z_off)
-{
-    EEPROM.update(0, 0xDD);
-    EEPROM.put(2, y_off);
-    EEPROM.put(6, z_off);
-    this->adxl.setAxisOffset(0, y_off, z_off);
-}
-
-void App::updateAccel(int &y, int &z)
-{
-    static int acc_y = 0,
-               acc_z = 0;
-
-    int tmp_x, tmp_y, tmp_z;
-    this->adxl.readAccel(&tmp_x, &tmp_y, &tmp_z);
-    acc_y = ((80 * acc_y) + (20 * tmp_y)) / 100;
-    acc_z = ((80 * acc_z) + (20 * tmp_z)) / 100;
-
-    y = acc_y;
-    z = acc_z;
-}
-
-void App::onMeasure()
+void App::onDistance()
 {
     static bool laser_on = false;
     static bool captured = false;
     static bool released = false;
-    static int dist = 0, y = 0, z = 0;
 
     if (!laser_on)
     {
@@ -195,14 +176,9 @@ void App::onMeasure()
 
     if (!captured)
     {
-        if (this->sonar->available())
-        {
-            int tmp = this->sonar->read();
-            if (tmp != MAXSONAREZ_READING_ERROR)
-                dist = tmp;
-        }
-        this->updateAccel(y, z);
-        this->ui->setPage(UserInterface::PAGE_MEASURE, dist, y, z);
+        this->updateDistance();
+        this->updateAccel();
+        this->ui->setPage(UserInterface::PAGE_DISTANCE, this->dist, this->y_val, this->z_val);
     }
 
     if (!released)
@@ -219,13 +195,50 @@ void App::onMeasure()
         {
             this->ui->setPage(UserInterface::PAGE_FLASH);
             delay(100);
-            this->ui->setPage(UserInterface::PAGE_MEASURE, dist, y, z);
+            this->ui->setPage(UserInterface::PAGE_DISTANCE, this->dist, this->y_val, this->z_val);
         }
     }
     else if (this->btn_in == UserInterface::BUTTON_INPUT_PRESSED_LONG)
     {
         digitalWrite(LASER_PIN, LOW);
+        captured = false;
         laser_on = false;
+        released = false;
+        this->app_st = App::SELECT;
+    }
+}
+
+void App::onAngle()
+{
+    static bool captured = false;
+    static bool released = false;
+
+    if (!captured)
+    {
+        this->updateAccel();
+        this->ui->setPage(UserInterface::PAGE_ANGLE, this->x_val, this->y_val);
+    }
+
+    if (!released)
+    {
+        if (this->btn_in == UserInterface::BUTTON_INPUT_LONG)
+            released = true;
+        return;
+    }
+
+    if (this->btn_in == UserInterface::BUTTON_INPUT_SHORT)
+    {
+        captured = !captured;
+        if (captured)
+        {
+            this->ui->setPage(UserInterface::PAGE_FLASH);
+            delay(100);
+            this->ui->setPage(UserInterface::PAGE_ANGLE, this->x_val, this->y_val);
+        }
+    }
+    else if (this->btn_in == UserInterface::BUTTON_INPUT_PRESSED_LONG)
+    {
+        captured = false;
         released = false;
         this->app_st = App::SELECT;
     }
@@ -255,62 +268,12 @@ void App::onPower()
     }
 }
 
-void App::onCalib()
-{
-    static bool init = true;
-    static bool released = false;
-    static uint8_t calib_st = 0;
-    int y, z;
-
-    if (init)
-    {
-        init = false;
-        this->adxl.setAxisOffset(0, 0, 0);
-        this->ui->setPage(UserInterface::PAGE_CALIB_0);
-    }
-    if (!released)
-    {
-        if (this->btn_in == UserInterface::BUTTON_INPUT_LONG)
-            released = true;
-        return;
-    }
-
-    switch (calib_st)
-    {
-    case 1:
-    {
-        this->updateAccel(y, z);
-        this->ui->setPage(UserInterface::PAGE_CALIB_1, y, z);
-        break;
-    }
-
-    case 2:
-        this->ui->setPage(UserInterface::PAGE_CALIB_2);
-        break;
-    }
-
-    if (this->btn_in == UserInterface::BUTTON_INPUT_SHORT)
-    {
-        if (calib_st == 1)
-            this->calibrateAccel(y, z);
-
-        calib_st = ((calib_st == 2) ? 2 : (calib_st + 1));
-    }
-    else if (this->btn_in == UserInterface::BUTTON_INPUT_PRESSED_LONG)
-    {
-        calib_st = 0;
-        init = true;
-        released = false;
-        this->app_st = App::SELECT;
-    }
-}
-
 void App::onSelect()
 {
     static const UserInterface::Page select_pages[] = {
-        UserInterface::PAGE_MENU_MEASURE,
-        UserInterface::PAGE_MENU_POWER,
-        UserInterface::PAGE_MENU_CALIB};
+        UserInterface::PAGE_MENU_DISTANCE,
+        UserInterface::PAGE_MENU_ANGLE,
+        UserInterface::PAGE_MENU_POWER};
     static bool init = true;
     static bool released = true;
     static uint8_t select_page_idx = 0;
@@ -329,7 +292,7 @@ void App::onSelect()
 
     if (this->btn_in == UserInterface::BUTTON_INPUT_SHORT)
     {
-        select_page_idx = (select_page_idx + 1) % 3;
+        select_page_idx = (select_page_idx + 1) % sizeof(select_pages);
         this->ui->setPage(select_pages[select_page_idx]);
     }
     else if (this->btn_in == UserInterface::BUTTON_INPUT_PRESSED_LONG)
@@ -340,15 +303,15 @@ void App::onSelect()
         switch (select_page_idx)
         {
         case 0:
-            this->app_st = App::MEASURE;
+            this->app_st = App::DISTANCE;
             break;
 
         case 1:
-            this->app_st = App::POWER;
+            this->app_st = App::ANGLE;
             break;
 
         case 2:
-            this->app_st = App::CALIB;
+            this->app_st = App::POWER;
             break;
         }
     }

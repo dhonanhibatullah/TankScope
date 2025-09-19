@@ -3,9 +3,8 @@
 
 #include <Arduino.h>
 #include <avr/wdt.h>
-#include <EEPROM.h>
 #include <SoftwareSerial.h>
-#include <SparkFun_ADXL345.h>
+#include <Adafruit_ADXL345_U.h>
 #include "MaxSonarEZ.h"
 #include "UserInterface.h"
 #include "config.h"
@@ -16,9 +15,9 @@ public:
     enum AppState : uint8_t
     {
         SELECT,
-        MEASURE,
-        POWER,
-        CALIB
+        DISTANCE,
+        ANGLE,
+        POWER
     };
 
     App();
@@ -30,24 +29,26 @@ public:
 
 private:
     MaxSonarEZ *sonar;
-    ADXL345 adxl;
+    Adafruit_ADXL345_Unified adxl;
     UserInterface *ui;
     AppState app_st;
     UserInterface::ButtonInput btn_in;
+    int16_t x_val, y_val, z_val;
+    int dist;
+
     void logInfo(const char *tag, String msg);
     void logWarn(const char *tag, String msg);
     void logError(const char *tag, String msg);
     void logDebug(const char *tag, String msg);
     void restart();
 
-    void applyCalibAccel();
-    void calibrateAccel(int y_off, int z_off);
-    void updateAccel(int &y, int &z);
+    void updateAccel();
+    void updateDistance();
 
     void onSelect();
-    void onMeasure();
+    void onDistance();
+    void onAngle();
     void onPower();
-    void onCalib();
 };
 
 #endif

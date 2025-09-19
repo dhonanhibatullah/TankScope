@@ -3,10 +3,10 @@
 
 #include <Arduino.h>
 
-#define ENABLE_LOG_INFO
-#define ENABLE_LOG_WARN
-#define ENABLE_LOG_ERROR
-#define ENABLE_LOG_DEBUG
+// #define ENABLE_LOG_INFO
+// #define ENABLE_LOG_WARN
+// #define ENABLE_LOG_ERROR
+// #define ENABLE_LOG_DEBUG
 
 #define SONAR_TX_PIN A0
 #define SONAR_RX_PIN A2
