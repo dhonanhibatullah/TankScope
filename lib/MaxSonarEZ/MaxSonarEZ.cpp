@@ -49,7 +49,7 @@ int MaxSonarEZ::read()
             return ((buf[1] - ascii_offset) * 1000) +
                    ((buf[2] - ascii_offset) * 100) +
                    ((buf[3] - ascii_offset) * 10) +
-                   (buf[4] - ascii_offset) - 39;
+                   (buf[4] - ascii_offset);
         }
     }
 
