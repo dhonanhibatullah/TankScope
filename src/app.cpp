@@ -87,6 +87,8 @@ void App::loop()
         this->onSelect();
         break;
     }
+
+    this->sleepCount();
 }
 
 void App::logInfo(const char *tag, String msg)
@@ -142,6 +144,43 @@ void App::restart()
     wdt_enable(WDTO_15MS);
     while (1)
     {
+    }
+}
+
+void App::sleepCount()
+{
+    static unsigned long last_interaction_ts = 0;
+    unsigned long ts = millis();
+
+    if (this->btn_in != UserInterface::BUTTON_INPUT_NONE)
+    {
+        last_interaction_ts = ts;
+        return;
+    }
+
+    if (this->app_st == App::SELECT)
+    {
+        if (ts - last_interaction_ts >= SLEEP_TIME)
+        {
+            digitalWrite(LASER_PIN, LOW);
+            this->sonar->disable();
+            this->ui->sleep();
+
+            while (1)
+                delay(0xFFFFFFFF);
+        }
+    }
+    else
+    {
+        if (ts - last_interaction_ts >= ACTIVE_SLEEP_TIME)
+        {
+            digitalWrite(LASER_PIN, LOW);
+            this->sonar->disable();
+            this->ui->sleep();
+
+            while (1)
+                delay(0xFFFFFFFF);
+        }
     }
 }
 

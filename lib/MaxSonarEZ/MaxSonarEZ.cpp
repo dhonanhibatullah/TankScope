@@ -49,11 +49,16 @@ int MaxSonarEZ::read()
             return ((buf[1] - ascii_offset) * 1000) +
                    ((buf[2] - ascii_offset) * 100) +
                    ((buf[3] - ascii_offset) * 10) +
-                   (buf[4] - ascii_offset);
+                   (buf[4] - ascii_offset) - 39;
         }
     }
 
     while (this->ser->available() > 0)
         this->ser->read();
     return MAXSONAREZ_READING_ERROR;
+}
+
+void MaxSonarEZ::disable()
+{
+    digitalWrite(this->enable_pin, LOW);
 }

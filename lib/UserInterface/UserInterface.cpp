@@ -6,6 +6,7 @@ UserInterface::UserInterface(
     uint8_t button_pin,
     uint8_t battery_pin) : display(nullptr),
                            button_in(UserInterface::BUTTON_INPUT_NONE),
+                           sleeping(0x00),
                            button_pin(button_pin),
                            battery_pin(battery_pin),
                            menu_opened(false)
@@ -214,6 +215,13 @@ void UserInterface::setPage(UserInterface::Page page, ...)
     this->display->display();
 }
 
+void UserInterface::sleep()
+{
+    this->display->clearDisplay();
+    this->display->display();
+    this->sleeping = 0x01;
+}
+
 void UserInterface::isrCallback()
 {
     volatile static uint8_t pressed_cnt = 0;
@@ -236,6 +244,17 @@ void UserInterface::isrCallback()
             this->button_in = UserInterface::BUTTON_INPUT_PRESSED_LONG;
         else if (pressed_cnt > 0)
             this->button_in = UserInterface::BUTTON_INPUT_PRESSED;
+    }
+
+    if (this->sleeping)
+    {
+        if (this->button_in == UserInterface::BUTTON_INPUT_SHORT || this->button_in == UserInterface::BUTTON_INPUT_LONG)
+        {
+            wdt_enable(WDTO_15MS);
+            while (1)
+            {
+            }
+        }
     }
 
     last_st = st;

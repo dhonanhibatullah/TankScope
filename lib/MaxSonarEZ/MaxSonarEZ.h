@@ -19,6 +19,7 @@ public:
     void begin();
     bool available();
     int read();
+    void disable();
 
 private:
     SoftwareSerial *ser;

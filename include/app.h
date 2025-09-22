@@ -14,6 +14,7 @@ class App
 public:
     enum AppState : uint8_t
     {
+        SLEEP,
         SELECT,
         DISTANCE,
         ANGLE,
@@ -41,6 +42,7 @@ private:
     void logError(const char *tag, String msg);
     void logDebug(const char *tag, String msg);
     void restart();
+    void sleepCount();
 
     void updateAccel();
     void updateDistance();

@@ -7,6 +7,8 @@
 // #define ENABLE_LOG_WARN
 // #define ENABLE_LOG_ERROR
 // #define ENABLE_LOG_DEBUG
+#define SLEEP_TIME 30000
+#define ACTIVE_SLEEP_TIME 300000
 
 #define SONAR_TX_PIN A0
 #define SONAR_RX_PIN A2

@@ -4,6 +4,7 @@
 #include <stdarg.h>
 #include <math.h>
 #include <Arduino.h>
+#include <avr/wdt.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
@@ -43,11 +44,13 @@ public:
     bool begin();
     ButtonInput getButtonInput();
     void setPage(Page page, ...);
+    void sleep();
     void isrCallback();
 
 private:
     Adafruit_SSD1306 *display;
     volatile ButtonInput button_in;
+    volatile uint8_t sleeping;
     volatile uint8_t button_pin;
     volatile uint8_t battery_pin;
     bool menu_opened;
