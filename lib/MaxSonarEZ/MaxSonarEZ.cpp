@@ -46,10 +46,13 @@ int MaxSonarEZ::read()
             while (this->ser->available() > 0)
                 this->ser->read();
 
-            return ((buf[1] - ascii_offset) * 1000) +
-                   ((buf[2] - ascii_offset) * 100) +
-                   ((buf[3] - ascii_offset) * 10) +
-                   (buf[4] - ascii_offset);
+            int raw_dist = ((buf[1] - ascii_offset) * 1000) +
+                           ((buf[2] - ascii_offset) * 100) +
+                           ((buf[3] - ascii_offset) * 10) +
+                           (buf[4] - ascii_offset);
+
+            int res = (int)(0.9978 * ((float)raw_dist) - 16.72);
+            return res;
         }
     }
 
